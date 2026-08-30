@@ -1,0 +1,4 @@
+interface:
+  display_name: "RO/DRO Research"
+  short_description: "Rigorous RO/DRO modeling, proofs, and statistical audits"
+  default_prompt: "Use $ro-dro-research to formulate or audit this RO/DRO research problem, with veto-powered checks for exact reformulations and statistical guarantees."
