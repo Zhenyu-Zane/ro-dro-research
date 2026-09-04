@@ -22,6 +22,13 @@ def minbern(c,a,b):
     pp=PPoly.from_bernstein_basis(BPoly(np.asarray(c,float)[:,None],[0.,1.])); r=np.asarray(pp.derivative().roots(extrapolate=False));
     rr=r[np.abs(np.imag(r))<1e-8].real if r.size else np.array([]); rr=rr[(rr>=a-1e-12)&(rr<=b+1e-12)]; x=np.r_[a,b,rr]; return float(np.min(pp(x)))
 
+def exact_upper(freq,alpha):
+    p=np.asarray(freq,float); p=p/p.sum(); n=len(p)-1; v,B=bernstein_matrix(n); h=(v>=alpha).astype(float)
+    res=linprog(p,A_ub=-B.T,b_ub=-h,bounds=[(None,None)]*(n+1),method='highs')
+    if not res.success: raise RuntimeError(res.message)
+    d=np.asarray(res.x); corr=max(0.,-minbern(d,0,alpha),1-minbern(d,alpha,1))
+    return min(1.,float(res.fun+corr))
+
 def band_upper(counts,alpha,beta_conf=.05):
     counts=np.asarray(counts,float); S=int(counts.sum()); freq=counts/S; n=len(counts)-1; v,B=bernstein_matrix(n); h=(v>=alpha).astype(float)
     rho=math.sqrt(.5/S*math.log(2*(n+1)/beta_conf)); lo=np.maximum(0,freq-rho); hi=np.minimum(1,freq+rho)
@@ -47,15 +54,20 @@ def main():
     N=tr[['store_id','product_id']].drop_duplicates().shape[0]
     X=tr.event.to_numpy().reshape(N,90); E=ev.event.to_numpy().reshape(N,7)
     alpha=.60; gamma=.20; beta_conf=.05; full_rate=X.mean(1); eval_rate=E.mean(1); truth=float(np.mean(full_rate>=alpha)); future=float(np.mean(eval_rate>=alpha))
-    depths=[2,4,6,8,12,16,24,32]; reps=40; rows=[]
+    depths=[2,4,6,8,12,16,24,32]; reps=40; rows=[]; pop=[]
     for n in depths:
+        # Population depth-n count law induced by the empirical 90-day risk distribution.
+        pk=np.array([np.mean(binom.pmf(k,n,full_rate)) for k in range(n+1)])
+        pu=exact_upper(pk,alpha)
+        pop.append({'depth':n,'population_identified_upper':pu})
         for rep in range(reps):
             # Resample days with replacement from each real 90-day history. Conditional on the empirical
             # series-specific stockout rate, K is exactly Binomial(n,v_i), matching the paper's model.
             idx=rng.integers(0,90,size=(N,n)); K=np.take_along_axis(X,idx,axis=1).sum(1).astype(int)
             cnt=np.bincount(K,minlength=n+1); plug=float(np.mean(K/n>=alpha)); bt=beta_tail(K,n,alpha); ru,rho=band_upper(cnt,alpha,beta_conf)
-            rows.append({'depth':n,'rep':rep,'full90_tail':truth,'eval7_tail':future,'plug_in_tail':plug,'beta_binomial_tail':bt,'robust_upper':ru,'rho':rho,'gamma':gamma,'alpha':alpha})
+            rows.append({'depth':n,'rep':rep,'full90_tail':truth,'eval7_tail':future,'plug_in_tail':plug,'beta_binomial_tail':bt,'robust_upper':ru,'rho':rho,'gamma':gamma,'alpha':alpha,'population_identified_upper':pu})
     raw=pd.DataFrame(rows); raw.to_csv(OUT/'freshretail_validation_raw.csv',index=False)
-    summ=raw.groupby('depth').agg(full90_tail=('full90_tail','first'),eval7_tail=('eval7_tail','first'),plug_median=('plug_in_tail','median'),plug_p10=('plug_in_tail',lambda x:np.quantile(x,.1)),plug_p90=('plug_in_tail',lambda x:np.quantile(x,.9)),beta_median=('beta_binomial_tail','median'),robust_median=('robust_upper','median'),robust_p10=('robust_upper',lambda x:np.quantile(x,.1)),robust_p90=('robust_upper',lambda x:np.quantile(x,.9)),rho=('rho','first')).reset_index(); summ.to_csv(OUT/'freshretail_validation_summary.csv',index=False)
-    meta={'source':'Dingdong-Inc/FreshRetailNet-50K','series':N,'train_days':90,'eval_days':7,'alpha':alpha,'gamma':gamma,'beta_conf':beta_conf,'reps':reps,'depths':depths,'full90_tail':truth,'eval7_tail':future,'train_stockout_day_fraction':float(X.mean()),'eval_stockout_day_fraction':float(E.mean()),'seed':SEED,'design_note':'Empirical-risk resampling validation: each store-product empirical 90-day stockout rate defines its environment risk; shallow histories are sampled with replacement so the conditional Binomial model is exact. The official 7-day eval split is reported separately as a temporal-shift stress test.'}; (OUT/'freshretail_meta.json').write_text(json.dumps(meta,indent=2)); print(json.dumps(meta,indent=2)); print(summ.to_string(index=False))
+    pd.DataFrame(pop).to_csv(OUT/'freshretail_population_identification.csv',index=False)
+    summ=raw.groupby('depth').agg(full90_tail=('full90_tail','first'),eval7_tail=('eval7_tail','first'),population_identified_upper=('population_identified_upper','first'),plug_median=('plug_in_tail','median'),plug_p10=('plug_in_tail',lambda x:np.quantile(x,.1)),plug_p90=('plug_in_tail',lambda x:np.quantile(x,.9)),beta_median=('beta_binomial_tail','median'),robust_median=('robust_upper','median'),robust_p10=('robust_upper',lambda x:np.quantile(x,.1)),robust_p90=('robust_upper',lambda x:np.quantile(x,.9)),rho=('rho','first')).reset_index(); summ.to_csv(OUT/'freshretail_validation_summary.csv',index=False)
+    meta={'source':'Dingdong-Inc/FreshRetailNet-50K','series':N,'train_days':90,'eval_days':7,'alpha':alpha,'gamma':gamma,'beta_conf':beta_conf,'reps':reps,'depths':depths,'full90_tail':truth,'eval7_tail':future,'train_stockout_day_fraction':float(X.mean()),'eval_stockout_day_fraction':float(E.mean()),'seed':SEED,'design_note':'Empirical-risk resampling validation: each store-product empirical 90-day stockout rate defines its environment risk; shallow histories are sampled with replacement so the conditional Binomial model is exact. The population identified upper uses the induced exact depth-n count law. The official 7-day eval split is reported separately as a temporal-shift stress test.'}; (OUT/'freshretail_meta.json').write_text(json.dumps(meta,indent=2)); print(json.dumps(meta,indent=2)); print(summ.to_string(index=False))
 if __name__=='__main__':main()
