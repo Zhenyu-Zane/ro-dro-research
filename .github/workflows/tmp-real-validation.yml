@@ -12,10 +12,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python -m pip install --upgrade pip && pip install numpy pandas scipy pyarrow huggingface_hub
-      - run: python tmp_real_validation/repair_freshretail_solver.py
+      - run: python -m pip install --upgrade pip && pip install numpy pandas scipy pyarrow huggingface_hub cvxpy cvxopt
+      - run: python tmp_real_validation/sdp_freshretail_check.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: freshretail-solver-repair
-          path: solver_repair_output/
+          name: freshretail-sdp-check
+          path: sdp_check_output/
