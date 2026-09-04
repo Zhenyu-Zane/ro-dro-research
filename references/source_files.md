@@ -12,6 +12,8 @@ When a delicate theorem condition matters, retrieve or inspect the original pape
 - Wang et al. — *Knowledge-Guided Wasserstein Distributionally Robust Optimization* (arXiv:2502.08146)
 - Zhang et al. — *Managing Inventory and Pricing with Contextual Robust Optimization* (working paper)
 - Chen et al. — *Streamlining Robustness* (working paper).
+- Gao — *Finite-Sample Guarantees for Wasserstein Distributionally Robust Optimization: Breaking the Curse of Dimensionality* (source manuscript).
+- Kannan, Bayraksan, Luedtke — *Residuals-based Distributionally Robust Optimization with Covariate Information* (source manuscript; arXiv:2012.01088v2).
 
 ## Source-use rule
 

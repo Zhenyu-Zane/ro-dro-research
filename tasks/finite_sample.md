@@ -20,6 +20,11 @@ Identify the training sample $\mathcal D_S$, its joint law, empirical distributi
 
 A clean DRO proof often has: define a good event $\mathcal E_S$; prove deterministically that on $\mathcal E_S$ the robust objective/constraint dominates true performance; then lower-bound $\Pr(\mathcal E_S)$.
 
+For Wasserstein DRO, distinguish two statistical bridges:
+
+1. **Distribution containment:** prove $\mathbb P^\star\in\widehat{\mathcal P}_S$ with high probability, then transfer containment to performance.
+2. **Direct loss-level generalization:** prove a uniform high-probability inequality comparing true loss with the Wasserstein robust loss, using loss variation and function-class complexity. This route can support $S^{-1/2}$ radius scaling without requiring $S^{-1/2}$ convergence of the empirical distribution in Wasserstein distance. See `cases/gao_finite_sample_wdro.md`.
+
 ## Step S3 — Match dependence assumptions
 
 Classify the sample as iid, independent non-identical, conditionally independent, martingale, mixing, Markov, trajectory, or clustered/block dependent. Use a theorem valid for that class. If none is available, return **NOT ESTABLISHED** rather than reusing an iid result.
@@ -36,7 +41,7 @@ If the decision is selected after seeing the same data, a fixed-$\bm x$ inequali
 
 For multistage results, distinguish model stagewise independence from training-sample independence. A product of stagewise event probabilities requires cross-stage independence; within-stage iid alone is insufficient. State whether evaluation is under product marginals or the true joint trajectory law.
 
-For parameter uncertainty plus residual ambiguity, identify separate good events, account for dependence, combine them validly, avoid double-counting estimation error, and state any radius tradeoff.
+For parameter uncertainty plus residual ambiguity, identify separate good events, account for dependence, combine them validly, avoid double-counting estimation error, and state any radius tradeoff. In regression-residual constructions, separate prediction/estimation error from residual-distribution error and track whether the target is conditional on a realized covariate; see `cases/kannan_residuals_based_dro.md`.
 
 ## Step S7 — Rate anatomy
 

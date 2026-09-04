@@ -25,6 +25,8 @@ auditor/sufficiency_compression_auditor.md
 cases/contextual_robust_optimization.md
 cases/data_driven_uncertainty_sets.md
 cases/decision_dependent_information_discovery.md
+cases/gao_finite_sample_wdro.md
+cases/kannan_residuals_based_dro.md
 cases/knowledge_guided_wdro.md
 cases/predict_optimize_satisfice_fortify.md
 cases/robust_satisficing.md
