@@ -1,5 +1,7 @@
 name: temporary-real-validation
 on:
+  push:
+    branches: [ chatgpt-real-validation-20260904 ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
