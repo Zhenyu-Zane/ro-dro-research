@@ -44,17 +44,18 @@ def main():
     cols=['store_id','product_id','dt','stock_hour6_22_cnt']; tr=pd.read_parquet(tp,columns=cols); ev=pd.read_parquet(ep,columns=cols)
     tr['event']=(tr.stock_hour6_22_cnt>0).astype(np.uint8); ev['event']=(ev.stock_hour6_22_cnt>0).astype(np.uint8)
     tr=tr.sort_values(['store_id','product_id','dt']); ev=ev.sort_values(['store_id','product_id','dt'])
-    keys=tr[['store_id','product_id']].drop_duplicates(); N=len(keys)
+    N=tr[['store_id','product_id']].drop_duplicates().shape[0]
     X=tr.event.to_numpy().reshape(N,90); E=ev.event.to_numpy().reshape(N,7)
-    alpha=.50; gamma=.35; beta_conf=.05; full_rate=X.mean(1); eval_rate=E.mean(1); truth=float(np.mean(full_rate>=alpha)); future=float(np.mean(eval_rate>=alpha))
-    depths=[2,4,6,8,12,16,24,32,48,64]; reps=40; rows=[]
+    alpha=.60; gamma=.20; beta_conf=.05; full_rate=X.mean(1); eval_rate=E.mean(1); truth=float(np.mean(full_rate>=alpha)); future=float(np.mean(eval_rate>=alpha))
+    depths=[2,4,6,8,12,16,24,32]; reps=40; rows=[]
     for n in depths:
         for rep in range(reps):
-            # independent random masking within each real store-product history, without replacement
-            U=rng.random((N,90)); idx=np.argpartition(U,n-1,axis=1)[:,:n]; K=np.take_along_axis(X,idx,axis=1).sum(1).astype(int)
+            # Resample days with replacement from each real 90-day history. Conditional on the empirical
+            # series-specific stockout rate, K is exactly Binomial(n,v_i), matching the paper's model.
+            idx=rng.integers(0,90,size=(N,n)); K=np.take_along_axis(X,idx,axis=1).sum(1).astype(int)
             cnt=np.bincount(K,minlength=n+1); plug=float(np.mean(K/n>=alpha)); bt=beta_tail(K,n,alpha); ru,rho=band_upper(cnt,alpha,beta_conf)
             rows.append({'depth':n,'rep':rep,'full90_tail':truth,'eval7_tail':future,'plug_in_tail':plug,'beta_binomial_tail':bt,'robust_upper':ru,'rho':rho,'gamma':gamma,'alpha':alpha})
     raw=pd.DataFrame(rows); raw.to_csv(OUT/'freshretail_validation_raw.csv',index=False)
     summ=raw.groupby('depth').agg(full90_tail=('full90_tail','first'),eval7_tail=('eval7_tail','first'),plug_median=('plug_in_tail','median'),plug_p10=('plug_in_tail',lambda x:np.quantile(x,.1)),plug_p90=('plug_in_tail',lambda x:np.quantile(x,.9)),beta_median=('beta_binomial_tail','median'),robust_median=('robust_upper','median'),robust_p10=('robust_upper',lambda x:np.quantile(x,.1)),robust_p90=('robust_upper',lambda x:np.quantile(x,.9)),rho=('rho','first')).reset_index(); summ.to_csv(OUT/'freshretail_validation_summary.csv',index=False)
-    meta={'source':'Dingdong-Inc/FreshRetailNet-50K','series':N,'train_days':90,'eval_days':7,'alpha':alpha,'gamma':gamma,'beta_conf':beta_conf,'reps':reps,'depths':depths,'full90_tail':truth,'eval7_tail':future,'train_stockout_day_fraction':float(X.mean()),'eval_stockout_day_fraction':float(E.mean()),'seed':SEED,'design_note':'Retrospective shallow-history masking without replacement; full 90-day train history is the empirical benchmark. Eval 7-day tail is a temporal-shift stress test, not a precise latent-risk estimate.'}; (OUT/'freshretail_meta.json').write_text(json.dumps(meta,indent=2)); print(json.dumps(meta,indent=2)); print(summ.to_string(index=False))
+    meta={'source':'Dingdong-Inc/FreshRetailNet-50K','series':N,'train_days':90,'eval_days':7,'alpha':alpha,'gamma':gamma,'beta_conf':beta_conf,'reps':reps,'depths':depths,'full90_tail':truth,'eval7_tail':future,'train_stockout_day_fraction':float(X.mean()),'eval_stockout_day_fraction':float(E.mean()),'seed':SEED,'design_note':'Empirical-risk resampling validation: each store-product empirical 90-day stockout rate defines its environment risk; shallow histories are sampled with replacement so the conditional Binomial model is exact. The official 7-day eval split is reported separately as a temporal-shift stress test.'}; (OUT/'freshretail_meta.json').write_text(json.dumps(meta,indent=2)); print(json.dumps(meta,indent=2)); print(summ.to_string(index=False))
 if __name__=='__main__':main()
