@@ -2,8 +2,6 @@ name: temporary-real-validation
 on:
   push:
     branches: [ chatgpt-real-validation-20260904 ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 jobs:
   run:
@@ -14,9 +12,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python -m pip install --upgrade pip && pip install numpy pandas scipy pyarrow huggingface_hub
-      - run: python tmp_real_validation/run_freshretail_validation.py
+      - run: python -m pip install --upgrade pip && pip install numpy pandas scipy requests
+      - run: python tmp_real_validation/build_lcl_official_weekly.py
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: freshretail-validation
+          name: lcl-official-weekly
           path: real_validation_output/
