@@ -13,9 +13,9 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install --upgrade pip && pip install numpy pandas scipy pyarrow huggingface_hub cvxpy cvxopt
-      - run: python tmp_real_validation/sdp_freshretail_check.py
+      - run: python tmp_real_validation/sos_cheb_freshretail_check.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: freshretail-sdp-check
-          path: sdp_check_output/
+          name: freshretail-sos-cheb-check
+          path: sos_cheb_output/
