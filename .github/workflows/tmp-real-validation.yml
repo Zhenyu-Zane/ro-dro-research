@@ -12,10 +12,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python -m pip install --upgrade pip && pip install numpy pandas scipy pyarrow huggingface_hub mpmath
-      - run: python tmp_real_validation/certify_n32_only.py
+      - run: python -m pip install --upgrade pip && pip install numpy pandas scipy pyarrow huggingface_hub
+      - run: python tmp_real_validation/run_freshretail_validation_stable.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: freshretail-n32-certified
-          path: n32_cert_output/
+          name: freshretail-validation-stable
+          path: freshretail_stable_output/
